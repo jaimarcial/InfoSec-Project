@@ -196,11 +196,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
     <style>
         /* Add your CSS styles here */
         * {
-            text-decoration: none;
+            text-decoration:none;
             box-sizing: border-box;
         }
         .navbar {
-            background: crimson;
+            background: black;
             font-family: calibri;
             padding-right: 15px;
             padding-left: 15px;
@@ -243,11 +243,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 1;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
+            overflow: auto;
             background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
@@ -375,8 +376,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
         <div class="logo"><a href="#">Sureflix</a></div>
         <ul>
             <li><a href="javascript:void(0)" onclick="openUpdatePopup()">Profile</a></li>
-            <li><a href="#">About</a></li>
-            <li><a href="#">Contact</a></li>
+            <li><a href="javascript:void(0)" onclick="openModal('aboutModal')">About</a></li>
+            <li><a href="javascript:void(0)" onclick="openModal('contactModal')">Contact</a></li>
             <?php if (isset($_SESSION['user_id'])): ?>
                 <!-- logout button -->
                 <button><a href="?logout=true">Logout</a></button>
@@ -387,8 +388,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
         </ul>
     </div>
 </nav>
-
-
 
 <!-- login modal -->
 <div id="loginModal" class="modal">
@@ -408,6 +407,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
         <?php endif; ?>
     </div>
 </div>
+
+<!-- about modal -->
+<div id="aboutModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('aboutModal')">&times;</span>
+                <h2>About Sureflix</h2>
+                <p>This is a class activity for our Information Assurance and Security Course. Sureflix is your ultimate platform for discovering the best movies and TV shows. Our mission is to provide you with a seamless entertainment experience.</p>
+                <h3>created by Elijah Jardine Lirios & Jaira Marcial</h3>
+            </div>
+        </div>
+
+<!-- contact modal -->
+<div id="contactModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('contactModal')">&times;</span>
+        <h2>Contact Us</h2>
+        <p>Email: support@sureflix.com</p>
+                <p>Phone: +123-456-7890</p>
+                <p>Address: 123 Sureflix Street, Movie City, MC 56789</p>
+            </div>
+        </div>
+
+
 
 <!-- sign up modal -->
 <div id="signupModal" class="modal">
@@ -491,13 +513,67 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['seats']) && isset($_PO
         <span class="close-btn" onclick="closeReserveModal()">&times;</span>
         <h2>Reserve Seats</h2>
         <form action="" method="POST">
-            <div id="movieDetails"></div>
-            <label for="seats">Number of Seats:</label>
-            <input type="number" name="seats" id="seats" min="1" required><br><br>
-            <button type="submit">Confirm Reservation</button>
+            <div id="movieDetails">
+                <p><strong>Movie:</strong> <span id="movieTitle">N/A</span></p>
+                <p><strong>Date:</strong> <span id="movieDate">N/A</span></p>
+                <p><strong>Time:</strong> <span id="movieTime">N/A</span></p>
+                <p><strong>Price per Ticket:</strong> $<span id="ticketPrice">N/A</span></p>
+            </div>
+            <div id="bookingModal" class="modal" role="dialog" aria-labelledby="bookingTitle" aria-hidden="true">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('bookingModal')" aria-label="Close">&times;</span>
+        <h2 id="bookingTitle">Reserve Your Seat</h2>
+        <form id="reservationForm" action="process_reservation.php" method="POST">
+            <label for="location">Select Location:</label>
+            <select id="location" name="location" required>
+                <option value="SM CITY MANILA">SM CITY MANILA</option>
+                <option value="SM SAN LAZARO">SM SAN LAZARO</option>
+                <option value="SM CITY STA MESA">SM CITY STA MESA</option>
+                <option value="SM NORTH EDSA">SM NORTH EDSA</option>
+            </select>
+
+            <label for="time">Show Time:</label>
+            <select id="time" name="time" required>
+                <option value="11:00 AM">11:00 AM</option>
+                <option value="02:00 PM">02:00 PM</option>
+                <option value="05:00 PM">05:00 PM</option>
+                <option value="08:00 PM">08:00 PM</option>
+            </select>
+
+            <label for="seatCount">Seats:</label>
+            <input type="number" id="seatCount" name="seatCount" min="1" max="10" required>
+
+            <button type="submit">Confirm your reservation</button>
+        </form>
+    
         </form>
     </div>
 </div>
+
+<!-- Success Modal -->
+<div id="successModal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('successModal')" aria-label="Close">&times;</span>
+        <h2>Reservation Successful!</h2>
+        <p>Your seats have been reserved successfully.</p>
+        <button onclick="redirectToHome()">Go to Home</button>
+    </div>
+</div>
+
+<!-- trigger ng modal sa db -->
+<!-- if ($stmt->execute()) {
+    echo "<script>
+        window.onload = function() {
+            document.getElementById('successModal').style.display = 'block';
+        };
+    </script>";
+} else {
+    echo "<script>
+        alert('Error: Unable to complete your reservation.');
+        window.history.back();
+    </script>";
+}-->
+
 
 <script>
 // pop up login
@@ -515,7 +591,38 @@ function closeLoginPopup() {
 function openSignupPopup() {
     closeAllModals();  // Close all modals before opening the signup modal
     document.getElementById('signupModal').style.display = "flex";
+}    // Function to open a modal
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = "block";
+    }
+
+    // Function to close a modal
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    // Close modals when clicking outside them
+    window.onclick = function(event) {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        });
+    };
+//get yung info from db
+function openReserveModal(movieTitle, movieDate, movieTime, ticketPrice) {
+    document.getElementById("movieTitle").textContent = movieTitle;
+    document.getElementById("movieDate").textContent = movieDate;
+    document.getElementById("movieTime").textContent = movieTime;
+    document.getElementById("ticketPrice").textContent = ticketPrice;
+    document.getElementById("reserveModal").style.display = "block";
 }
+
+function closeReserveModal() {
+    document.getElementById("reserveModal").style.display = "none";
+}
+
 
 //close signup modal
 function closeSignupPopup() {
@@ -553,6 +660,21 @@ function openUpdatePopup() {
 function closeUpdatePopup() {
     document.getElementById('updateModal').style.display = 'none';
 }
+// Function to show the success modal
+function showSuccessModal() {
+    document.getElementById("successModal").style.display = "block";
+}
+
+// Function to close the modal
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = "none";
+}
+
+// Function to redirect after successful reservation
+function redirectToHome() {
+    window.location.href = "index.php"; // Replace with your homepage or desired URL
+}
+
 
 //close all modals
 window.onload = function() {
